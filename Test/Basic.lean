@@ -3,49 +3,66 @@ import Mathlib.Tactic
 open Nat
 open Bool
 
-def hello := "world"
+-- THis is mostly a learning excersise for myself and should not
+-- be considered an example of good code that should be replicated.
+-- Indeed I strongly suspect that I've made errors in style and
+-- there are better ways to solve these problems.
 
-def idNat (n : Nat) : Nat := n
+-- Lean has a built in Bijective.  However in part this is so I grow
+-- more familure with how to state that a bijunction exists between to
+-- types.
+def isBijective (A : Type) (B : Type) :=
+    ∃ (f : A → B), ∃ (fi : B → A), (f ∘ fi = id) ∧ (fi ∘ f = id)
 
-theorem idNatClosed : idNat ∘ idNat = id := by
-    ext x
-    exact rfl
-
-def isBijective (A : Type) (B : Type) (f : A → B) (fi : B → A) :=
-    (f ∘ fi = id) ∧ (fi ∘ f = id)
-
-theorem natBijectsNat : isBijective (Nat) (Nat) (idNat) (idNat) := by {
-    apply And.intro
-    apply idNatClosed
-    apply idNatClosed
+-- A really simple test case.  Natural numbers are bijective with itself.
+theorem natBijectsNat : isBijective (Nat) (Nat) := by {
+    rw [isBijective]
+    exists id
+    exists id
 }
 
-theorem comp_rewrite (X : Type) (Y : Type) (Z : Type) (f : Y → Z) (g : X → Y) (x : X) : (f ∘ g) x = f  (g x) := by rfl
+-- I am sure that there is a way to do this natively in lean.  However I wasn't able
+-- to find this.
+theorem comp_rewrite (X : Type) (Y : Type) (Z : Type) (f : Y → Z) (g : X → Y) (x : X) :
+    (f ∘ g) x = f  (g x) := by rfl
 
-theorem cantor : ¬ ∃ f:Nat→(Nat → Bool), ∃ fi:(Nat → Bool)→Nat,  isBijective (Nat) (Nat → Bool) (f) (fi):= by {
+-- My proof of cantor's theorm.  That |ℵ_0| ≠ |2^ℵ_0|
+theorem cantor : ¬ isBijective (Nat) (Nat → Bool) := by {
     intro h1
+    rw [isBijective] at h1
+
+    -- I'm not sure if there is a better way to use a ∃ in a
+    -- hypothiusis
     cases h1 with
     | intro f h2 =>
-        have hD : ∃ D: Nat → Bool, ∀n:Nat, D n = !(f n n) := by {
-             exact Exists.intro (fun a ↦ !f a a) (congrFun rfl)
-        }
         cases h2 with
         | intro fi h3 =>
-            cases hD with
-                | intro D h4 =>
-                    have hb: ∃ b: Nat, fi D = b := by {
-                        exact exists_eq'
-                    }
-                    cases hb with
-                    | intro b h5 =>
-                        rw [isBijective] at h3
-                        have h6 := h4 b
-                        nth_rw 2 [← h5] at h6
-                        have h7 := h3.left
-                        rw [funext_iff] at h7
-                        have h8 := h7 D
-                        rw [comp_rewrite] at h8
-                        rw [h8] at h6
-                        exact (eq_not_self (D b)).mp h6
+
+            -- we only need the left hand side of the bijection
+            -- since we are proving the lack of an injection from
+            -- |2^ℵ_0| to |ℵ_0|
+            have h4 := h3.left
+
+            -- Is there a cleaner way to add ᗡ to both sides
+            rw [funext_iff] at h4
+            let D : Nat → Bool := fun a ↦ !f a a
+            specialize h4 D
+
+            rw [funext_iff] at h4
+            let d: Nat := fi D
+            specialize h4 d
+
+            rw [comp_rewrite] at h4
+
+            -- Another case where I would think there is a more natural way
+            -- to do this.
+            have hdD : fi D = d := rfl
+            rw [hdD] at h4
+
+            rw [id] at h4
+            have hDd : D d = !f d d := rfl
+            rw [hDd] at h4
+
+            -- exact? told me to do this
+            exact (eq_not_self (f d d)).mp h4
 }
---
