@@ -21,48 +21,30 @@ theorem natBijectsNat : isBijective (Nat) (Nat) := by {
     exists id
 }
 
--- I am sure that there is a way to do this natively in lean.  However I wasn't able
--- to find this.
-theorem comp_rewrite (X : Type) (Y : Type) (Z : Type) (f : Y → Z) (g : X → Y) (x : X) :
-    (f ∘ g) x = f  (g x) := by rfl
-
 -- My proof of cantor's theorm.  That |ℵ_0| ≠ |2^ℵ_0|
 theorem cantor : ¬ isBijective (Nat) (Nat → Bool) := by {
     intro h1
     rw [isBijective] at h1
 
-    -- I'm not sure if there is a better way to use a ∃ in a
-    -- hypothiusis
-    cases h1 with
-    | intro f h2 =>
-        cases h2 with
-        | intro fi h3 =>
+    -- Use the ∃ to introduce the functions and its inverse
+    rcases h1 with ⟨ f , ⟨fi, h2 ⟩  ⟩
 
-            -- we only need the left hand side of the bijection
-            -- since we are proving the lack of an injection from
-            -- |2^ℵ_0| to |ℵ_0|
-            have h4 := h3.left
+    -- we only need the left hand side of the bijection
+    -- since we are proving the lack of an injection from
+    -- |2^ℵ_0| to |ℵ_0|
+    have h3 := h2.left
 
-            -- Is there a cleaner way to add ᗡ to both sides
-            rw [funext_iff] at h4
-            let D : Nat → Bool := fun a ↦ !f a a
-            specialize h4 D
+    -- Set up the anty diagonal a number stream that
+    -- differs from every possible number stream.
+    let Diagonal : Nat → Bool := fun a ↦ !f a a
+    have h4 := funext_iff.mp h3 Diagonal
 
-            rw [funext_iff] at h4
-            let d: Nat := fi D
-            specialize h4 d
+    -- Find the index of the diagonal
+    let d: Nat := fi Diagonal
 
-            rw [comp_rewrite] at h4
+    -- Ask what happens when the index of the anti-diagonal
+    -- is fed into the diagonal function
+    have h5 := funext_iff.mp h4 d
 
-            -- Another case where I would think there is a more natural way
-            -- to do this.
-            have hdD : fi D = d := rfl
-            rw [hdD] at h4
-
-            rw [id] at h4
-            have hDd : D d = !f d d := rfl
-            rw [hDd] at h4
-
-            -- exact? told me to do this
-            exact (eq_not_self (f d d)).mp h4
+    exact (eq_not_self ((f ∘ fi) Diagonal d)).mp h5
 }
