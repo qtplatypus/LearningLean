@@ -75,3 +75,40 @@ theorem bijectionComm :  ∀ (A B), hasBijection (A) (B) ↔ hasBijection (B) (A
 }
 
 def hasInjection (A) (B) := ∃ (f : A → B), ∃ (fi : B → A), fi ∘ f = id
+
+theorem injectionTrans : ∀ (A B C), hasInjection (A) (B) ∧ hasInjection (B) (C) →
+  hasInjection (A) (C) := by {
+    rintro A B C
+    rw[hasInjection, hasInjection, hasInjection]
+
+    rintro ⟨ inj_ab, inj_bc ⟩
+    obtain ⟨ f_ab, ⟨ f_ba, left_inverse_ab ⟩⟩ := inj_ab
+    obtain ⟨ f_bc, ⟨ f_cb, left_inverse_bc ⟩⟩ := inj_bc
+
+    use f_bc ∘ f_ab
+    use f_ba ∘ f_cb
+
+    rw[Function.comp_assoc]
+    rw[← Function.comp_assoc f_cb]
+    rw[left_inverse_bc]
+    rw[Function.id_comp]
+    exact left_inverse_ab
+  }
+
+theorem biImpInj : ∀ (A B), hasBijection (A) (B) →
+   hasInjection (A) (B) ∧ hasInjection (B) (A) := by {
+  intro A B
+
+  rw[hasBijection, hasInjection, hasInjection]
+  intro bi
+  obtain ⟨ f_ab, ⟨ f_ba , ⟨ left_inverse, right_inverse ⟩ ⟩⟩ := bi
+
+  apply And.intro
+  case left =>
+    use f_ab
+    use f_ba
+
+  case right =>
+    use f_ba
+    use f_ab
+}
