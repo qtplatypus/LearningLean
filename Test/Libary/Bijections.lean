@@ -1,7 +1,9 @@
 import Mathlib.Tactic
+import Mathlib.Data.Set.Basic
 
 open Nat
 open Bool
+open Set
 
 /- Proving things about bijections.-/
 
@@ -9,7 +11,6 @@ open Bool
 -- an excersize to allow me to teach myself lean.
 def hasBijection (A) (B) :=
     ∃ (f : A → B), ∃ (fi : B → A), (f ∘ fi = id) ∧ (fi ∘ f = id)
-
 
 -- bijections are transatrive
 theorem bijectionTrans : ∀ (A B C), hasBijection (A) (B) ∧ hasBijection (B) (C) →
@@ -112,3 +113,24 @@ theorem biImpInj : ∀ (A B), hasBijection (A) (B) →
     use f_ba
     use f_ab
 }
+
+-- cancelInverse allows me to fi (f x) = x
+theorem cancelInverse (A) (B) (f : A → B) (fi : B → A)
+  (isInverse : fi ∘ f = id) (x : A) : (fi (f x)) = x := by {
+  have cgy : (fi ∘ f) x = id x := by {exact congrFun isInverse x}
+  rw [Function.comp_apply] at cgy
+  rw [id] at cgy
+  exact cgy
+}
+
+theorem inverseIsUnique (A) (B) (f : A → B) (fi : B → A)
+  (isInverse : fi ∘ f = id) (y z a) (forwardEQ : a = f y) (backwardEQ : fi a = z) :
+  (y = z ) := by {
+    have ci := cancelInverse A B f fi isInverse z
+    rw[← ci] at backwardEQ
+    rw [forwardEQ] at backwardEQ
+    rw [cancelInverse A B f fi isInverse, cancelInverse A B f fi isInverse] at backwardEQ
+    exact backwardEQ
+  }
+
+def hasSurjection (A) (B) := ∃ (f : A → B), ∃ (fi : B → A), f ∘ fi = id
