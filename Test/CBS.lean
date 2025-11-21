@@ -19,12 +19,11 @@ open Set
 -- Basically if we have an injection A → B and and injection B → A then we have a
 -- Bijection A ↔ B+
 
-theorem CBS (A : Type) (B : Type) : hasInjection (A) (B) ∧ hasInjection (B) (A)
+theorem CBS {A : Type} {B : Type} : hasInjection (A) (B) ∧ hasInjection (B) (A)
   → hasBijection (A) (B) := by {
 
   -- Broadly the stratagy here is to use KnasterTarskiFixedPoint theorm
   -- to create a subset of A.
-
 
   -- Our main vars
 
@@ -51,7 +50,7 @@ theorem CBS (A : Type) (B : Type) : hasInjection (A) (B) ∧ hasInjection (B) (A
 
   -- C is a fixed point of φ and CisFixed is the
   -- witness to the fact that this point is fixed under phi.
-  obtain ⟨ C, CisFixed ⟩ := KnasterTarskiFixedPoint A φ monophi
+  obtain ⟨ C, CisFixed ⟩ := KnasterTarskiFixedPoint monophi
 
   -- TODO: This needs a better name.
   -- This is equasion (2) from the pdf
@@ -68,29 +67,6 @@ theorem CBS (A : Type) (B : Type) : hasInjection (A) (B) ∧ hasInjection (B) (A
       rw [← CisFixed]
       exact xpC
   }
-
-  -- Another bit of refactoring should be done here.  This
-  -- is to transform (fi '' (f '' x)) into x.  Again there is
-  -- a standard libary function for this but I discovered it
-  -- long after I had started down this path. I should factor this out.
-
-  have image_reverse_comp {Z : Type} {X : Type} {z : Set Z} {h : Z → X} {hi : X → Z }
-    {zx_inj : hi ∘ h = id} : (hi '' (h '' z) = z) := by {
-    ext y
-    apply Iff.intro
-    case mp =>
-      intro i
-      rw [← image_id z]
-      rw [← zx_inj]
-      rw [image_comp]
-      exact i
-    case mpr =>
-      intro i
-      rw [← image_id z] at i
-      rw [← zx_inj] at i
-      rw [image_comp] at i
-      exact i
-    }
 
   -- The forward bijective function from A to B
   let forward (x : A) : B :=
@@ -116,7 +92,7 @@ theorem CBS (A : Type) (B : Type) : hasInjection (A) (B) ∧ hasInjection (B) (A
 
     case pos =>
       unfold backward
-      simp [hz]
+      simp only [Function.comp_apply, hz]
       unfold forward
       rw [mem_image] at hz
       obtain ⟨ a , haC⟩ := hz
@@ -125,17 +101,17 @@ theorem CBS (A : Type) (B : Type) : hasInjection (A) (B) ∧ hasInjection (B) (A
       by_cases hy : fi z ∈ C
 
       case pos =>
-        simp [hy]
+        simp only [hy, ↓reduceDIte]
         rw [← haC.right]
-        simp [hfi]
+        simp only [hfi, id_eq]
       case neg =>
         rw [← haC.right] at hy
-        simp [hfi] at hy
+        simp only [hfi, id_eq] at hy
         exact False.elim (hy haC.left)
 
     case neg =>
       unfold backward
-      simp [hz]
+      simp only [Function.comp_apply, hz, id_eq]
       unfold forward
       by_cases hy : g z ∈ C
 
@@ -146,8 +122,8 @@ theorem CBS (A : Type) (B : Type) : hasInjection (A) (B) ∧ hasInjection (B) (A
         rw [mem_compl_iff] at hy
         exact False.elim (hy hgi)
       case neg =>
-        simp [hy]
-        rw [cancelInverse B A g gi]
+        simp only [hy, ↓reduceDIte]
+        rw [cancelInverse g gi]
         rw [ba_inj]
   }
 
@@ -157,13 +133,13 @@ theorem CBS (A : Type) (B : Type) : hasInjection (A) (B) ∧ hasInjection (B) (A
 
     case pos =>
       unfold forward
-      simp [hy]
+      simp only [Function.comp_apply, hy, id_eq]
       unfold backward
       by_cases hx : f z ∈ (f '' C)
 
       case pos =>
-        simp [hx]
-        rw [cancelInverse A B f fi]
+        simp only [hx, ↓reduceDIte]
+        rw [cancelInverse f fi]
         exact ab_inj
       case neg =>
         have hgi := mem_image_of_mem f hy
@@ -181,8 +157,7 @@ theorem CBS (A : Type) (B : Type) : hasInjection (A) (B) ∧ hasInjection (B) (A
         unfold forward at hx
         simp only [hy] at hx
         rw [two] at hy
-        rw [mem_compl_iff] at hy
-        rw [not_not] at hy
+        rw [mem_compl_iff, not_not] at hy
         have gihy := mem_image_of_mem gi hy
         rw [image_reverse_comp] at gihy
         exact False.elim (gihy hx)
@@ -201,16 +176,22 @@ theorem CBS (A : Type) (B : Type) : hasInjection (A) (B) ∧ hasInjection (B) (A
         unfold forward
         simp only [hy]
 
-        rw [two] at hy
-        rw [mem_compl_iff] at hy
-        rw [not_not] at hy
-        rw [mem_image] at hy
-        obtain ⟨ x , hhx ⟩ := hy
+        -- I am curious about this.
+        -- we are not in a classical
+        -- namesapce but clearly not_not
+        -- is classical.  By using classical
+        -- to define backwards and forwards
+        -- does lean work out that I am ment to be classical
+        -- here?
 
+        rw [two, mem_compl_iff, not_not, mem_image] at hy
+
+        obtain ⟨ x , hhx ⟩ := hy
         have deco := congrArg gi hhx.right
-        rw [cancelInverse B A g gi ba_inj x] at deco
+        rw [cancelInverse g gi] at deco
         rw [← deco]
         exact hhx.right
+        exact ba_inj
   }
 
   use forward

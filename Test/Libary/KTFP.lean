@@ -15,7 +15,7 @@ def antimonotone (A B) (φ : Set A → Set B)
 
 -- complement_antimonotone. A compliment is always antimonotone.
 -- U ⊆ V → Vᶜ ⊆ Uᶜ .
-lemma complement_antimonotone A : antimonotone A A (fun X ↦ Xᶜ) := by {
+lemma complement_antimonotone {A} : antimonotone A A (fun X ↦ Xᶜ) := by {
     intro _ _ UsubV _ aInComp aInU
 
     exact aInComp (UsubV aInU)
@@ -25,7 +25,7 @@ lemma complement_antimonotone A : antimonotone A A (fun X ↦ Xᶜ) := by {
 -- U ⊆ V → f''U ⊆ f''V
 -- The image of V is going to be all the elements in the image of U (because U is a subset of V).
 -- pluss the images of anything that is in V / U
-lemma image_mono A B (f : A → B) : monotone A B (fun X ↦ f '' X) := by {
+lemma image_mono {A B} (f : A → B) : monotone A B (fun X ↦ f '' X) := by {
   intro _ V UsubV b ⟨ x1, hx1⟩
 
   refine (mem_image f V b).mpr ?_
@@ -42,7 +42,7 @@ lemma image_mono A B (f : A → B) : monotone A B (fun X ↦ f '' X) := by {
 
 -- KnasterTarskiFixedPoint. If there is a monotonal endofunction on Set A then there are
 -- fixed points.
-theorem KnasterTarskiFixedPoint A (φ : Set A → Set A) : monotone A A φ →
+theorem KnasterTarskiFixedPoint {A} {φ : Set A → Set A} : monotone A A φ →
   ∃ Y : Set A, φ Y = Y := by {
     intro a
 

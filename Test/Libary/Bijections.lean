@@ -13,11 +13,11 @@ def hasBijection (A) (B) :=
     ∃ (f : A → B), ∃ (fi : B → A), (f ∘ fi = id) ∧ (fi ∘ f = id)
 
 -- bijections are transatrive
-theorem bijectionTrans : ∀ (A B C), hasBijection (A) (B) ∧ hasBijection (B) (C) →
+theorem bijectionTrans {A B C} : hasBijection (A) (B) ∧ hasBijection (B) (C) →
   hasBijection (A) (C) := by {
 
-  rintro A B C h1
-  rw[hasBijection, hasBijection] at h1
+  rintro h1
+  repeat rw[hasBijection] at h1
 
   obtain ⟨ fab, ⟨ fba, h2 ⟩⟩ := h1.left
   obtain ⟨ fbc, ⟨ fcb, h3 ⟩⟩ := h1.right
@@ -51,9 +51,7 @@ theorem bijectionTrans : ∀ (A B C), hasBijection (A) (B) ∧ hasBijection (B) 
 }
 
 -- Bijection is communicative
-theorem bijectionComm :  ∀ (A B), hasBijection (A) (B) ↔ hasBijection (B) (A) := by {
-  rintro A B
-
+theorem bijectionComm {A B} : hasBijection (A) (B) ↔ hasBijection (B) (A) := by {
   rw[hasBijection, hasBijection]
 
   apply Iff.intro
@@ -77,14 +75,11 @@ theorem bijectionComm :  ∀ (A B), hasBijection (A) (B) ↔ hasBijection (B) (A
 
 def hasInjection (A) (B) := ∃ (f : A → B), ∃ (fi : B → A), fi ∘ f = id
 
-theorem injectionTrans : ∀ (A B C), hasInjection (A) (B) ∧ hasInjection (B) (C) →
+theorem injectionTrans {A B C} : hasInjection (A) (B) ∧ hasInjection (B) (C) →
   hasInjection (A) (C) := by {
-    rintro A B C
-    rw[hasInjection, hasInjection, hasInjection]
+    repeat rw[hasInjection]
 
-    rintro ⟨ inj_ab, inj_bc ⟩
-    obtain ⟨ f_ab, ⟨ f_ba, left_inverse_ab ⟩⟩ := inj_ab
-    obtain ⟨ f_bc, ⟨ f_cb, left_inverse_bc ⟩⟩ := inj_bc
+    rintro ⟨ ⟨ f_ab, ⟨ f_ba, left_inverse_ab ⟩⟩, ⟨ f_bc, ⟨ f_cb, left_inverse_bc ⟩⟩⟩
 
     use f_bc ∘ f_ab
     use f_ba ∘ f_cb
@@ -96,13 +91,13 @@ theorem injectionTrans : ∀ (A B C), hasInjection (A) (B) ∧ hasInjection (B) 
     exact left_inverse_ab
   }
 
-theorem biImpInj : ∀ (A B), hasBijection (A) (B) →
+-- Having a bijection implies the existance of injections both
+-- ways.
+theorem biImpInj {A B} : hasBijection (A) (B) →
    hasInjection (A) (B) ∧ hasInjection (B) (A) := by {
-  intro A B
 
-  rw[hasBijection, hasInjection, hasInjection]
-  intro bi
-  obtain ⟨ f_ab, ⟨ f_ba , ⟨ left_inverse, right_inverse ⟩ ⟩⟩ := bi
+  repeat rw[hasBijection]
+  intro ⟨ f_ab, ⟨ f_ba , ⟨ left_inverse, right_inverse ⟩ ⟩⟩
 
   apply And.intro
   case left =>
@@ -115,22 +110,46 @@ theorem biImpInj : ∀ (A B), hasBijection (A) (B) →
 }
 
 -- cancelInverse allows me to fi (f x) = x
-theorem cancelInverse (A) (B) (f : A → B) (fi : B → A)
-  (isInverse : fi ∘ f = id) (x : A) : (fi (f x)) = x := by {
+theorem cancelInverse {A} {B} (f : A → B) (fi : B → A)
+  {isInverse : fi ∘ f = id} (x : A) : (fi (f x)) = x := by {
   have cgy : (fi ∘ f) x = id x := by {exact congrFun isInverse x}
   rw [Function.comp_apply] at cgy
   rw [id] at cgy
   exact cgy
 }
 
-theorem inverseIsUnique (A) (B) (f : A → B) (fi : B → A)
-  (isInverse : fi ∘ f = id) (y z a) (forwardEQ : a = f y) (backwardEQ : fi a = z) :
+theorem inverseIsUnique {A} {B} (f : A → B) (fi : B → A)
+  {isInverse : fi ∘ f = id} {y z a} (forwardEQ : a = f y) (backwardEQ : fi a = z) :
   (y = z ) := by {
-    have ci := cancelInverse A B f fi isInverse z
-    rw[← ci] at backwardEQ
-    rw [forwardEQ] at backwardEQ
-    rw [cancelInverse A B f fi isInverse, cancelInverse A B f fi isInverse] at backwardEQ
-    exact backwardEQ
+    rw[← cancelInverse f fi z] at backwardEQ
+    · rw [forwardEQ] at backwardEQ
+      rw [cancelInverse f fi] at backwardEQ
+      · rw [cancelInverse f fi] at backwardEQ
+        · exact backwardEQ
+        · exact isInverse
+      · exact isInverse
+    · exact isInverse
   }
+
+-- This is to transform (fi '' (f '' x)) into x.  Again there is
+-- a standard libary function for this but I discovered it
+-- long after I had started down this path. I should factor this out.
+def image_reverse_comp {Z : Type} {X : Type} {z : Set Z} {h : Z → X} {hi : X → Z}
+    {zx_inj : hi ∘ h = id} : (hi '' (h '' z) = z) := by {
+  ext y
+  apply Iff.intro
+  case mp =>
+    intro i
+    rw [← image_id z]
+    rw [← zx_inj]
+    rw [image_comp]
+    exact i
+  case mpr =>
+    intro i
+    rw [← image_id z] at i
+    rw [← zx_inj] at i
+    rw [image_comp] at i
+    exact i
+}
 
 def hasSurjection (A) (B) := ∃ (f : A → B), ∃ (fi : B → A), f ∘ fi = id
